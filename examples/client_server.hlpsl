@@ -1,0 +1,122 @@
+%% PROTOCOL: 
+%% VARIANT: 
+%% PURPOSE: 
+%% CLEINT_SERVER:
+%% 1. C  ----- {IdClient.MotDePasseClient}_PKs ----> S
+%% 2. C <----- {ClefSession}_PKc ------------------  S
+%% 3. C  ----- {IdVideo}_ClefSession --------------> S
+%% 4. C <----- {IdVideo.LienVideo}_ClefSession ----  S
+%% 5. C  ----- {ok.H(LienVideo)}_ClefSession ------> S
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle client, initiant le protocole
+
+role client (C, S: agent, 
+            IdClient, IdVideo, Ok : protocol_id,
+            MotDePasseClient : text,            
+            PKc, PKs: public_key,      
+            SND, RCV: channel(dy),
+            H: hash_func) 
+played_by C def=
+
+  local State: nat,
+        ClefSession: symmetric_key, LienVideo: text
+
+  init State:=0
+
+  transition  
+        0.  State=0 /\ RCV(start) =|> 
+	            State':=1 /\ SND({IdClient.MotDePasseClient}_PKs)
+                /\ witness(C,S,auth_id_cs,{IdClient.MotDePasseClient}) 
+
+        2.  State=1 /\ RCV({ClefSession'}_PKc) =|> 
+	            State':=2 /\ SND({IdVideo}_ClefSession')
+                /\ secret(ClefSession', secret_sess_key, {C, S})
+                /\ request(C,S,auth_id_sc,{ClefSession}) 
+        4.  State=2 /\ RCV({IdVideo.LienVideo'}_ClefSession) =|> 
+	            State':=3 /\ SND({ok.H(LienVideo')}_ClefSession)
+                /\ secret(LienVideo', secret_id, {C, S}) 
+   
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %% définition du rôle server
+
+role server (C, S: agent,
+            IdClient, IdVideo: protocol_id,
+            MotDePasseClient, LienVideo : text,                 
+            PKc, PKs: public_key,      
+            SND, RCV: channel(dy),
+            H: hash_func)
+played_by S def=
+
+  local State: nat,
+        ClefSession: symmetric_key
+
+  init State:=0
+
+  transition  
+   
+        1.  State=0 /\ RCV({IdClient'.MotDePasseClient'}_PKs) =|> 
+	            State':=1 /\ ClefSession':=new() /\ SND({ClefSession'}_PKc)
+                          /\ secret(ClefSession', secret_sess_key, {C, S})
+                          /\ request(S,C,auth_id_cs,{IdClient.MotDePasseClient})
+                          /\ witness(S,C,auth_id_sc,{ClefSession}) 
+
+        3.  State=1 /\ RCV({IdVideo}_ClefSession) =|> 
+	            State':=2 /\ SND({IdVideo.LienVideo}_ClefSession)
+                /\ secret(LienVideo, secret_id, {C, S})
+
+        5.  State=2 /\ RCV({ok.H(LienVideo)}_ClefSession) =|> 
+	            State':=3
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle caractérisant une session
+role session(C, S: agent, PKc, PKs: public_key, Ok: protocol_id, Ha: hash_func, IdClient, IdVideo: protocol_id, MotDePasseClient, LienVideo: text ) def=
+
+  local Sc, Rc, Ss, Rs: channel(dy)
+
+  composition 
+
+	client(C, S, IdClient, IdVideo, Ok, MotDePasseClient, PKc, PKs, Sc, Rc, ha)
+     /\ server(C, S, IdClient, IdVideo, MotDePasseClient, LienVideo, PKc, PKs, Ss, Rs, ha)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle caractérisant le scenario à exécuter
+role environment() def=
+
+    const c, s: agent,
+	    pks, pkc, pki: public_key,
+        ok: protocol_id,
+        ha: hash_func,
+        idclient, idvideo: protocol_id,
+        motdepasseclient, lienvideo: text,
+        secret_id, secret_sess_key, auth_id_cs, auth_id_sc : protocol_id
+
+    intruder_knowledge = {c, s, pkc, pks, pki, inv(pki)}
+
+    composition
+
+	session(c,s,pkc,pks, ok, ha, idclient, idvideo,motdepasseclient, lienvideo)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% pour l'instant, pas de section goal ici (donc pas de propriété à vérifier)
+
+goal
+
+    authentication_on auth_id_cs
+    authentication_on auth_id_sc
+    %%authentication_on motdepasseclient
+    secrecy_of secret_id
+    secrecy_of secret_sess_key
+
+end goal
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% lancement du rôle principal
+environment()

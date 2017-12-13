@@ -1,0 +1,75 @@
+\documentclass[]{scrartcl}
+\usepackage[french]{babel}
+\usepackage[utf8x]{inputenc}
+%opening
+\title{Protocole de sécurisation de gestion à distance d'un radar automatique de route}
+\author{Pierre-Marie JUNGES, Florent NOSARI}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+\end{abstract}
+
+\section{Présentation du protocole}
+
+\subsection{But}
+
+Le but de se protocole est de permettre la gestion à distance d'un radar automatique de route pas les autorité compétentes en ayant la certitude que les informations soient authentiques (i.e. qu'elles proviennent bien des relevés fait par le radar ou des gestionnaires) et confidentielles (i.e. qu'une tierce personne ne puisse pas y avoir accès).
+
+\subsection{Déroulement}
+
+Le protocole est initié par le gestionnaire du radar, celui-ci utilise de la cryptographie asymétrique dans un premier temps dans le but d'échanger un clé secrète commune et continuer en cryptographie symétrique. L'authentification se fait à l'ai d'un nonce qui est créer par le gestionnaire.
+\\
+\\
+L'algorithme d'échange est décrit ci-dessous : 
+\\
+\\
+Soient 
+$G$ le gestionnaire avec $PKg$ sa clé publique et  $SKg$ sa clé privé
+\\
+$R$ le radar avec $PKr$ sa clé publique et  $SKr$ sa clé privé
+\\
+$Ng$ le nonce de G et $Nr$ le nonce de $R$.
+\\
+$K$ la clé secrète partagé
+\\
+\\
+Les connaissances initiales sont les suivantes :
+\\
+\\
+$G : \{G, R, SKg, PKg, PKr\}$
+\\
+$R : \{R, SKr, PKr\}$
+\\
+\\
+Le gestionnaire initie le protocole en envoyant un nonce $Ng$ chiffré par $PKr$.
+\\
+$G \rightarrow \{G.Pkg.Ng\}\_PKr \longrightarrow R$
+\\
+\\
+Le radar répond au gestionnaire avec $Ng$ et un nonce $Nr$ chiffré par $PKg$.
+\\
+$G \longleftarrow \{Ng.Nr\}\_PKg \leftarrow R$
+\\
+\\
+Le gestionnaire répond avec $Nr$ et une clé secrète $K$, qu'il vient de générer, chiffré par $PKr$.
+\\
+$G \rightarrow \{Nr.K\}\_PKr \longrightarrow R$
+\\
+\\
+Le radar répond avec $K$ chiffré par $PKg$ pour afin de montrer qu'il est d'accord.
+\\
+$G \longleftarrow \{K\}\_PKg \leftarrow R$
+\\
+\\
+Une fois l'échange de la clé secrète $K$ effectué tout les messages $M$ sont chiffré avec.
+\\
+$G \rightarrow \{M\}\_K \longrightarrow R$
+\\
+$G \longleftarrow \{M\}\_K \leftarrow R$
+
+
+\end{document}
