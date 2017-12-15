@@ -17,11 +17,19 @@
 
 \subsection{But}
 
-Le but de se protocole est de permettre la gestion à distance d'un radar automatique de route pas les autorité compétentes en ayant la certitude que les informations soient authentiques (i.e. qu'elles proviennent bien des relevés fait par le radar ou des gestionnaires) et confidentielles (i.e. qu'une tierce personne ne puisse pas y avoir accès).
+Le but de ce protocole est de permettre la gestion à distance d'un radar automatique de route pas les autorité compétentes en ayant la certitude que les informations soient authentiques (i.e. qu'elles proviennent bien des relevés fait par le radar), que seul le gestionnaire puisse accéder au données du radar, que seul le gestionnaire puisque contrôler le radar et que toutes les informations qui transitent entre les deux soient confidentielles (i.e. qu'une tierce personne ne puisse pas y avoir accès).
+\\
+\\
+En résumé :
+\\
+\begin{itemize}
+	\item Les informations qui transitent doivent être confidentielles et authentiques
+	\item Seul le gestionnaire peut contrôler le radar et accéder au données du radar
+\end{itemize}
 
 \subsection{Déroulement}
 
-Le protocole est initié par le gestionnaire du radar, celui-ci utilise de la cryptographie asymétrique dans un premier temps dans le but d'échanger un clé secrète commune et continuer en cryptographie symétrique. L'authentification se fait à l'ai d'un nonce qui est créer par le gestionnaire.
+Le protocole est initié par le gestionnaire du radar, celui-ci utilise de la cryptographie asymétrique dans un premier temps dans le but d'échanger un clé secrète commune et continuer en cryptographie symétrique. L'authentification se fait à l'aide d'un serveur d'authentification.
 \\
 \\
 L'algorithme d'échange est décrit ci-dessous : 
@@ -32,44 +40,57 @@ $G$ le gestionnaire avec $PKg$ sa clé publique et  $SKg$ sa clé privé
 \\
 $R$ le radar avec $PKr$ sa clé publique et  $SKr$ sa clé privé
 \\
-$Ng$ le nonce de G et $Nr$ le nonce de $R$.
+$S$ le serveur avec $PKs$ sa clé publique et  $SKs$ sa clé privé
 \\
-$K$ la clé secrète partagé
+$K$ la clé secrète partagé lors d'une session
+\\
+$N$ un nonce
+\\
+$M$ un message quelconque
 \\
 \\
 Les connaissances initiales sont les suivantes :
 \\
 \\
-$G : \{G, R, SKg, PKg, PKr\}$
+$G : \{G, R, S, SKg, PKg, PKs\}$
 \\
-$R : \{R, SKr, PKr\}$
+$R : \{R, S, SKr, PKr, PKs\}$
 \\
-\\
-Le gestionnaire initie le protocole en envoyant un nonce $Ng$ chiffré par $PKr$.
-\\
-$G \rightarrow \{G.Pkg.Ng\}\_PKr \longrightarrow R$
+$S : \{S, R, SKs, PKs, PKr\}$
 \\
 \\
-Le radar répond au gestionnaire avec $Ng$ et un nonce $Nr$ chiffré par $PKg$.
+Le gestionnaire initie le protocole en envoyant l'identité du radar $R$ et sont mot de passe $PSWD$ le tout chiffré par $PKs$.
 \\
-$G \longleftarrow \{Ng.Nr\}\_PKg \leftarrow R$
-\\
-\\
-Le gestionnaire répond avec $Nr$ et une clé secrète $K$, qu'il vient de générer, chiffré par $PKr$.
-\\
-$G \rightarrow \{Nr.K\}\_PKr \longrightarrow R$
+$G \rightarrow \{R.PSWD\}\_PKs \longrightarrow S$
 \\
 \\
-Le radar répond avec $K$ chiffré par $PKg$ pour afin de montrer qu'il est d'accord.
+Si l'identité du gestionnaire est vérifiée alors le serveur envoie au radar une demande de connexion à $G$ accompagné d'une clé secrète $K$, le tout chiffré par $PKr$ et envoie $K$ à $G$.
 \\
-$G \longleftarrow \{K\}\_PKg \leftarrow R$
+$S \rightarrow \{G.K\}\_PKr \longrightarrow R$
+$S \rightarrow \{K\}\_PKr \longrightarrow G$
 \\
 \\
-Une fois l'échange de la clé secrète $K$ effectué tout les messages $M$ sont chiffré avec.
+Le radar répond au serveur par un nonce $N$ chiffré par $PKs$ pour confirmé l'identité du serveur.
 \\
-$G \rightarrow \{M\}\_K \longrightarrow R$
+$S \longleftarrow \{N\}\_PKs \leftarrow R$
 \\
-$G \longleftarrow \{M\}\_K \leftarrow R$
+\\
+Le serveur confirme son identité au radar en renvoyant le nonce $N$ chiffré par $PKr$.
+\\
+$S \rightarrow \{N\}\_PKg \longrightarrow R$
+\\
+\\
+Une fois l'identité du serveur vérifié, le radar indique à $G$ que tout est ok pour communiquer.
+\\
+$G \longleftarrow \{ok\}\_PKg \leftarrow R$
+\\
+\\
+Une fois la clé secrète partagé, $G$ et $R$ l'utilise pour s'envoyer des messages $M$.
+\\
+
+$G \leftrightarrow \{M\}\_K \leftrightarrow R$
+\\
+\\
 
 
 \end{document}
