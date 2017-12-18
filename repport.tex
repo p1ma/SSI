@@ -1,6 +1,22 @@
 \documentclass[]{scrartcl}
 \usepackage[french]{babel}
 \usepackage[utf8x]{inputenc}
+\usepackage{pgf-umlsd}
+\usepackage{tikz}
+
+% \newthread[edge distance]{var}{thread name}
+\renewcommand{\newthread}[3][0.2]{
+	\newinst[#1]{#2}{#3}
+	\stepcounter{threadnum}
+	\node[below of=inst\theinstnum,node distance=0.8cm] (thread\thethreadnum) {};
+	\tikzstyle{threadcolor\thethreadnum}=[fill=gray!30]
+	\tikzstyle{instcolor#2}=[fill=gray!30]
+}
+
+\renewcommand{\mess}[3]{
+\begin{messcall}{#1}{#2}{#3}\end{messcall}
+}
+
 %opening
 \title{Protocole de sécurisation de gestion à distance d'un radar automatique de route}
 \author{Pierre-Marie JUNGES, Florent NOSARI}
@@ -67,7 +83,7 @@ $G \rightarrow \{R.PSWD\}\_PKs \longrightarrow S$
 Si l'identité du gestionnaire est vérifiée alors le serveur envoie au radar une demande de connexion à $G$ accompagné d'une clé secrète $K$, le tout chiffré par $PKr$ et envoie $K$ à $G$.
 \\
 $S \rightarrow \{G.K\}\_PKr \longrightarrow R$
-$S \rightarrow \{K\}\_PKr \longrightarrow G$
+$S \rightarrow \{K\}\_PKg \longrightarrow G$
 \\
 \\
 Le radar répond au serveur par un nonce $N$ chiffré par $PKs$ pour confirmé l'identité du serveur.
@@ -91,6 +107,31 @@ Une fois la clé secrète partagé, $G$ et $R$ l'utilise pour s'envoyer des mess
 $G \leftrightarrow \{M\}\_K \leftrightarrow R$
 \\
 \\
-
+\begin{figure}[h]
+	\centering
+	\begin{sequencediagram}
+		\newthread{G}{Gestionnaire}{}
+		\newthread[2]{S}{Serveur d'Auth.}{}
+		\newthread[2]{R}{Radar}{}
+		
+	
+		\mess{G}{ $\{R.PSWD\}\_PKs$ }{S}
+					
+		\mess{S}{ $\{K\}\_PKg$ }{G}
+		\mess{S}{ $\{G.K\}\_PKg$ }{R}
+		
+		\mess{R}{ $\{N\}\_PKs$ }{S}
+		
+		\mess{S}{ $\{N\}\_PKg$ }{R}
+		
+		\mess{R}{ $\{ok\}\_PKg$ }{G}
+		
+		\begin{sdblock}{ Loop }{}
+			\mess{G}{ $\{M_{i}\}\_K$ }{R}
+			\mess{R}{ $\{M_{i+1}\}\_K$ }{G}			
+		\end{sdblock}
+				
+	\end{sequencediagram}
+\end{figure}
 
 \end{document}
