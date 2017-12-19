@@ -60,7 +60,7 @@ $S$ le serveur avec $PKs$ sa clé publique et  $SKs$ sa clé privé
 \\
 $K$ la clé secrète partagé lors d'une session
 \\
-$N$ un nonce
+$N_{1}$ et $N_{2}$ des nonces
 \\
 $M$ un message quelconque
 \\
@@ -75,15 +75,16 @@ $R : \{R, S, SKr, PKr, PKs\}$
 $S : \{S, R, SKs, PKs, PKr\}$
 \\
 \\
-Le gestionnaire initie le protocole en envoyant l'identité du radar $R$ et sont mot de passe $PSWD$ le tout chiffré par $PKs$.
+Le gestionnaire initie le protocole en envoyant une nonce $N_{1}$, l'identité du radar $R$ et sont mot de passe $PSWD$ le tout chiffré par $PKs$.
 \\
-$G \rightarrow \{R.PSWD\}\_PKs \longrightarrow S$
+$G \rightarrow \{N_{1}.R.PSWD\}\_PKs \longrightarrow S$
 \\
 \\
 Si l'identité du gestionnaire est vérifiée alors le serveur envoie au radar une demande de connexion à $G$ accompagné d'une clé secrète $K$, le tout chiffré par $PKr$ et envoie $K$ à $G$.
 \\
+$S \rightarrow \{N_{1}.K\}\_PKg \longrightarrow G$
+\\
 $S \rightarrow \{G.K\}\_PKr \longrightarrow R$
-$S \rightarrow \{K\}\_PKg \longrightarrow G$
 \\
 \\
 Le radar répond au serveur par un nonce $N$ chiffré par $PKs$ pour confirmé l'identité du serveur.
@@ -115,14 +116,14 @@ $G \leftrightarrow \{M\}\_K \leftrightarrow R$
 		\newthread[2]{R}{Radar}{}
 		
 	
-		\mess{G}{ $\{R.PSWD\}\_PKs$ }{S}
+		\mess{G}{ $\{N_{1}.R.PSWD\}\_PKs$ }{S}
 					
-		\mess{S}{ $\{K\}\_PKg$ }{G}
-		\mess{S}{ $\{G.K\}\_PKg$ }{R}
+		\mess{S}{ $\{N_{1}.K\}\_PKg$ }{G}
+		\mess{S}{ $\{G.K\}\_PKr$ }{R}
 		
-		\mess{R}{ $\{N\}\_PKs$ }{S}
+		\mess{R}{ $\{N_{2}\}\_PKs$ }{S}
 		
-		\mess{S}{ $\{N\}\_PKg$ }{R}
+		\mess{S}{ $\{N_{2}\}\_PKr$ }{R}
 		
 		\mess{R}{ $\{ok\}\_PKg$ }{G}
 		
