@@ -1,0 +1,16 @@
+Yo,
+
+
+
+J'ai essayé vite fait de refaire l'algo sur avispa néanmoins, je crois que pour faire fonctionner cette sequence d'échange, il faudrait utiliser sur le Serveur d'Auth un set ( KeyMap: (agent.public_key) set) de cette façon le Gestionnaire en étape 1 enverrai plutot:
+1. {N1.R.PKr.PSWD}_PKs
+et donc à partir de R.PKr, le Serveur d'auth pourra retrouver (et vérifier en faisant un in(R'.PK', KeyMap) que le radar est bien connu du serveur d'auth) 
+
+Ensuite même probleme pour l'échange:
+{G.K}_PKr, je crois qu'il faut rajouter également la PKg (car je crois pas qu'on puisse envoyer juste un agent et récupérer sa clé directement).
+Donc ca deviendrait: {G.PKg.K}_PKr.
+
+Apres, on pourrait également gérer la validité des commandes demandées en faisant un set des commandes autorisées sur le Radar, et faire en sorte que si quelqu'un demande une commande, il faudra nécessairement que cette commande soit présente dans le set du radar sinon on effectue la fin de l'échange (pour eviter au radar de recevoir des commandes wtf).
+
+
+Ca s'annonce quand même comme un sacré bordel pour implémenter ca sur avispa^^
