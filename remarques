@@ -13,4 +13,27 @@ Donc ca deviendrait: {G.PKg.K}_PKr.
 Apres, on pourrait également gérer la validité des commandes demandées en faisant un set des commandes autorisées sur le Radar, et faire en sorte que si quelqu'un demande une commande, il faudra nécessairement que cette commande soit présente dans le set du radar sinon on effectue la fin de l'échange (pour eviter au radar de recevoir des commandes wtf).
 
 
-Ca s'annonce quand même comme un sacré bordel pour implémenter ca sur avispa^^
+Ca s'annonce quand même comme un sacré bordel pour implémenter ca sur avispa^^.
+
+
+EDIT: 
+
+En regardant un peu sur internet les différents protocoles qui existent, un protocole d'échange de clé effectue la même chose que notre protocole (sans attaque possible apparemment).
+Le protocole s'est: Lowe modified Denning-Sacco shared key
+
+http://www.lsv.fr/Software/spore/denningSaccoLowe.html
+
+A, B, S :  	principal
+Nb :  	nonce
+Kas, Kbs, Kab :  	key
+T :  	timestamp
+dec :  	nonce -> nonce
+
+1.  	A	->	S	:  	A, B
+2.  	S	->	A	:  	{B, Kab, T, {Kab, A, T}Kbs}Kas
+3.  	A	->	B	:  	{Kab,A, T}Kbs
+4.  	B	->	A	:  	{Nb}Kab
+5.  	A	->	B	:  	{dec(Nb)}Kab
+
+Il faudrait ensuite adapter notre partie: commandes au radar, mais ca reste assez simple.
+
