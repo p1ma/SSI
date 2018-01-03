@@ -1,23 +1,5 @@
 Yo,
 
-
-
-J'ai essayé vite fait de refaire l'algo sur avispa néanmoins, je crois que pour faire fonctionner cette sequence d'échange, il faudrait utiliser sur le Serveur d'Auth un set ( KeyMap: (agent.public_key) set) de cette façon le Gestionnaire en étape 1 enverrai plutot:
-1. {N1.R.PKr.PSWD}_PKs
-et donc à partir de R.PKr, le Serveur d'auth pourra retrouver (et vérifier en faisant un in(R'.PK', KeyMap) que le radar est bien connu du serveur d'auth) 
-
-Ensuite même probleme pour l'échange:
-{G.K}_PKr, je crois qu'il faut rajouter également la PKg (car je crois pas qu'on puisse envoyer juste un agent et récupérer sa clé directement).
-Donc ca deviendrait: {G.PKg.K}_PKr.
-
-Apres, on pourrait également gérer la validité des commandes demandées en faisant un set des commandes autorisées sur le Radar, et faire en sorte que si quelqu'un demande une commande, il faudra nécessairement que cette commande soit présente dans le set du radar sinon on effectue la fin de l'échange (pour eviter au radar de recevoir des commandes wtf).
-
-
-Ca s'annonce quand même comme un sacré bordel pour implémenter ca sur avispa^^.
-
-
-EDIT: 
-
 En regardant un peu sur internet les différents protocoles qui existent, un protocole d'échange de clé effectue la même chose que notre protocole (sans attaque possible apparemment).
 Le protocole s'est: Lowe modified Denning-Sacco shared key
 
@@ -36,4 +18,12 @@ dec :  	nonce -> nonce
 5.  	A	->	B	:  	{dec(Nb)}Kab
 
 Il faudrait ensuite adapter notre partie: commandes au radar, mais ca reste assez simple.
+
+EDIT (03/01/2018):
+
+Pour éviter une potentielle attaque, il faudrait définir le serveur (S) en tant que role d'environnement (et pas de session). Vu que son role ne dépend pas des sessions, il tourne tout le temps et attend que quelqu'un lui envoie une requete.
+Ensuite, il faudrait lui ajouter une 'Map' contenant les agents autorisés à communiquer avec leurs clés publiques respectives.
+Comme ca si genre un intruder veut initier le dialogue, le serveur verifie que l'initiateur du dialogue est present dans la 'Map' des personnes authorisées, si oui on continue sinon on finie l'échange.
+
+En plus ca montre qu'on genre les ensembles, on PEZ DANS LE GAME
 

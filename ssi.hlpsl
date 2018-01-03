@@ -1,0 +1,149 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Projet de SSI:
+%% Auteurs: Pierre-Marie JUNGES, Florent NOSARI
+%% Sujet: Gestion à distance d'un radar automatique de route
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Description du protocole d'échange
+%
+% G: gestionnaire (KG)
+% R: radar (KR)
+% S: server (KS)
+% PKg, PKr, PKs: public key
+%
+%
+% Description du protocole:
+% 1. Le gestionnaire (G) indique son intention de discuter avec le radar (R) au serveur (S)
+% 1. G -> S: {G, R}_PKs 
+%
+% 2. Le serveur (S) répond au gestionnaire (G), en fournissant une clé symetrique Kgr
+% 2. S - > G: {R, PKr, Na, {Kgr, G, Na}_PKr}_PKg
+%
+% 3. Maintenant, le gestionnaire (G) envoie son intention de discuter directement avec le radar (R)
+% 3. G -> R: {Kgr, G, Na}_PKr
+%
+% 4. Le radar (R) échange un nonce avec le gestionnaire (G)
+% 4. R -> G: {Nb}_Kgr
+%
+% 5. Le gestionnaire (G) confirme qu'il a bien recu le bon nonce et envoie sa commande au radar (R)
+% 5. G -> R: {Nb--, commande}_Kgr
+%
+% 6. Le radar (R) répond à la commande
+% 6. R -> G: {Nb--, ok}_Kgr
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle gestionnaire, initiant le protocole
+%
+% Connaissances initiales du gestionnaire:
+% S: Le serveur d'authentification
+% R: Le radar a qui envoyé des ordres
+% PKs: La clé publique du serveur d'authentification
+% PKg: La clé publique du gestionnaire
+% C: La commande a envoyer
+
+role gestionnaire (
+    G, S, R: agent,
+    C: text,
+    PKg, PKs: public_key,      
+    SND, RCV: channel(dy)
+    )  
+played_by G def=
+
+  local State: nat
+
+  init State := 0
+
+  transition  
+        initiation. State=0 /\ Rcv(start)
+                =|>  State':=1 /\ Snd({G.R}_PKs)
+   
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle radar
+%
+% Connaissances initiales du radar:
+% S: Le serveur d'authentification
+% PKs: La clé publique du serveur d'authentification
+% PKr: La clé publique du radar
+
+role radar (
+    R, S: agent,            
+    PKr, PKs: public_key,      
+    SND, RCV: channel(dy)
+    )
+played_by R def=
+
+  local %% TODO
+
+  init State:=0
+
+  transition  
+        %% TODO
+   
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle serveur
+%
+% Connaissances initiales du serveur:
+% G: Le gestionnaire
+% R: Le radar
+% PKr: La clé publique du radar
+% PKg: La clé publique du gestionnaire
+
+role server (S: agent,
+	PKs: public_key,
+	KeyMap: (agent.public_key) set,
+	SND, RCV: channel(dy)
+	)
+played_by S def=
+
+  local State: nat,
+        Kgr: symmetric_key
+
+  init State := 0
+
+  transition  
+      requete. State=0 /\ Rcv({G.R}_PKs)
+              =|> Kgr':=new()
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle caractérisant une session
+role session() def= %% TODO
+
+  local %% TODO
+
+  composition 
+
+	%% TODO
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle caractérisant le scenario à exécuter
+role environment() def=
+
+    const %% TODO
+
+    intruder_knowledge = {%% TODO}
+
+    composition
+
+	session(%% TODO)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% pour l'instant, pas de section goal ici (donc pas de propriété à vérifier)
+
+goal
+
+    %% TODO
+
+end goal
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% lancement du rôle principal
+environment()
