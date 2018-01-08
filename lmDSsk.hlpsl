@@ -1,0 +1,167 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Projet de SSI:
+%% Auteurs: Pierre-Marie JUNGES, Florent NOSARI
+%% Protocole: Lowe modified Denning-Sacco shared key
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Description du protocole d'échange
+%
+% A: Alice (KA)
+% B: Bob (KB)
+% S: serveur (KS)
+%
+%
+% Description du protocole:
+% 1. Alice (A) indique son intention de discuter avec le Bob (B) au serveur (S)
+% 1. A -> S: {A, B} 
+%
+% 2. Le serveur (S) répond à Alice (A), en fournissant une clé symetrique Kab
+% 2. S - > A: {B, Kab, T, {Kab, A, T}_Kbs}_Kas
+%
+% 3. Maintenant, Alice (A) envoie son intention de discuter directement avec Bob (B)
+% 3. A -> B: {Kab, A, T}_Kbs
+%
+% 4. Bob (B) échange un nonce avec Alice (A)
+% 4. B -> A: {Nb}_Kab
+%
+% 5. Alice (A) confirme qu'elle a bien recu le bon nonce et répond à Bob (B)
+% 5. A -> B: {Nb--}_Kab
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle Alice, initiant le protocole
+%
+% Connaissances initiales d'Alice:
+% S: Le serveur d'authentification
+% B: Bob
+
+role alice (
+    A, S, B: agent,    
+    Kas: symmetric_key,
+    SND, RCV: channel(dy),
+    Pred: hash_func
+)  
+played_by A def=
+
+  local State, T, Nb: nat,
+        Kab, Kbs: symmetric_key
+
+
+  init State := 0
+
+  transition  
+        1. State=0 /\ RCV(start)
+                =|>  State':=1 /\ SND({A.B})
+
+        3. State=1 /\ RCV({B.Kab.T.{Kab.A.T'}_Kbs}_Kas)
+                =|>  State':=2 /\ SND({Kab.A.T'}_Kbs)
+
+        5. State=2 /\ RCV({Nb}_Kab)
+                =|>  State':=3 /\ SND({Pred(Nb)}_Kab)
+   
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle Bob
+%
+% Connaissances initiales de Bob:
+% S: Le serveur d'authentification
+
+role bob (
+    B, S: agent,            
+    Kbs: symmetric_key,      
+    SND, RCV: channel(dy),
+    Pred: hash_func
+)
+
+played_by B def=
+
+  local State, T, Nb: nat,
+        A: agent,
+        Kab: symmetric_key
+
+  init State:=0
+
+  transition  
+        4. State=0 /\ RCV({Kab'.A'.T'}_Kbs)
+                =|>  State':=1 /\ Nb':=new() /\ SND({Nb'}_Kab)
+        6. State= 1 /\ RCV({Pred(Nb)}_Kab)
+                =|> State':=2
+   
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle serveur
+%
+% Connaissances initiales du serveur:
+% A: Alice
+% B: Bob
+
+role serveur (A, B, S: agent,
+	SND, RCV: channel(dy),
+    Kbs, Kas: symmetric_key
+)
+played_by S def=
+
+  local State, T: nat,
+        Kab: symmetric_key
+
+  init State := 0
+
+  transition 
+        2. State=0 /\ RCV(A.B)
+                =|> State':=1 /\ T':=new() /\ Kab':=new() /\  SND({B.Kab'.T'.{Kab'.A.T'}_Kbs}_Kas)
+                    /\ secret(Kab', secrecy_of_kab, {A,B,S})
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle caractérisant une session
+role session(
+    A, B, S: agent,
+    SND, RCV: channel(dy),
+    Pred: hash_func,
+    Kas, Kbs: symmetric_key
+
+) def= 
+ 
+
+  composition 
+
+	alice(A, S, B, Kas, SND, RCV, Pred) /\
+    bob(S, B, Kbs, SND, RCV, Pred) /\ 
+    serveur(A, B, S, SND, RCV, Kbs, Kas)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle caractérisant le scenario à exécuter
+role environment() def=
+
+    local Snd, Rcv: channel(dy) 
+
+    const a, b, s, i: agent,
+          pred: hash_func,
+          kas, kbs: symmetric_key,
+          secrecy_of_kab: protocol_id
+
+    intruder_knowledge = {a, b, s}
+
+    composition
+	    session(a, b, s, Snd, Rcv, pred, kas, kbs) /\
+        session(a, i, s, Snd, Rcv, pred, kas, kbs) /\
+        session(i, b, s, Snd, Rcv, pred, kas, kbs)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% pour l'instant, pas de section goal ici (donc pas de propriété à vérifier)
+
+goal
+
+    secrecy_of secrecy_of_kab
+
+end goal
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% lancement du rôle principal
+environment()
