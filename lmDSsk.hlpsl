@@ -50,13 +50,14 @@ played_by A def=
 
   transition  
         1. State=0 /\ RCV(start)
-                =|>  State':=1 /\ SND({A.B})
+                =|>  State':=1 /\ SND(A.B)
 
-        3. State=1 /\ RCV({B.Kab.T.{Kab.A.T'}_Kbs}_Kas)
-                =|>  State':=2 /\ SND({Kab.A.T'}_Kbs)
+        3. State=1 /\ RCV({B.Kab'.T'.{Kab'.A.T'}_Kbs'}_Kas)
+                =|>  State':=2 /\ SND({Kab'.A.T'}_Kbs')
 
-        5. State=2 /\ RCV({Nb}_Kab)
-                =|>  State':=3 /\ SND({Pred(Nb)}_Kab)
+        5. State=2 /\ RCV({Nb'}_Kab)
+                =|>  State':=3 /\ SND({Pred(Nb')}_Kab)
+                     /\ request(A, B, authentication_on_ab, Pred(Nb'))
    
 end role
 
@@ -78,12 +79,14 @@ played_by B def=
   local State, T, Nb: nat,
         A: agent,
         Kab: symmetric_key
+        
 
   init State:=0
 
   transition  
         4. State=0 /\ RCV({Kab'.A'.T'}_Kbs)
-                =|>  State':=1 /\ Nb':=new() /\ SND({Nb'}_Kab)
+                =|>  State':=1 /\ Nb':=new() /\ SND({Nb'}_Kab')
+                    /\ witness(B, A, authentication_on_ab, Nb')
         6. State= 1 /\ RCV({Pred(Nb)}_Kab)
                 =|> State':=2
    
@@ -126,7 +129,6 @@ role session(
  
 
   composition 
-
 	alice(A, S, B, Kas, SND, RCV, Pred) /\
     bob(S, B, Kbs, SND, RCV, Pred) /\ 
     serveur(A, B, S, SND, RCV, Kbs, Kas)
@@ -142,14 +144,14 @@ role environment() def=
     const a, b, s, i: agent,
           pred: hash_func,
           kas, kbs: symmetric_key,
-          secrecy_of_kab: protocol_id
+          secrecy_of_kab, authentication_on_ab: protocol_id
 
     intruder_knowledge = {a, b, s}
 
     composition
-	    session(a, b, s, Snd, Rcv, pred, kas, kbs) /\
-        session(a, i, s, Snd, Rcv, pred, kas, kbs) /\
-        session(i, b, s, Snd, Rcv, pred, kas, kbs)
+	    session(a, b, s, Snd, Rcv, pred, kas, kbs) %%/\
+        %%session(a, i, s, Snd, Rcv, pred, kas, kbs) /\
+        %%session(i, b, s, Snd, Rcv, pred, kas, kbs)
 
 end role
 
@@ -159,6 +161,7 @@ end role
 goal
 
     secrecy_of secrecy_of_kab
+    authentication_on authentication_on_ab
 
 end goal
 
