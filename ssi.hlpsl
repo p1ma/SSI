@@ -41,20 +41,27 @@
 % C: La commande a envoyer
 
 role gestionnaire (
-    G, S, R: agent,
-    C: text,
+    G, R: agent,
     PKg, PKs: public_key,      
-    SND, RCV: channel(dy)
-    )  
+    Snd, Rcv: channel(dy))  
 played_by G def=
 
-  local State: nat
+  local State: nat,
+	Ng, Nr: text,
+	PKr: public_key
 
   init State := 0
 
   transition  
-        initiation. State=0 /\ Rcv(start)
-                =|>  State':=1 /\ Snd({G.R}_PKs)
+        1. State=0 /\ Rcv(start)
+                =|>  State':=1 /\ Snd(G.R)
+	2. State=1 /\ Rcv({R.PKr'}_inv(PKs))
+		=|> State':=2 /\ Ng':= new() 
+		/\ secret(Ng', sng, {G.R}) 
+		/\ Snd({Ng'.G}_PKr)
+	3. State=2 /\ Rcv({Ng.Nr'.R}_PKg)
+		=|> State':=3 /\ Snd({Nr'}_PKr)
+
    
 end role
 
@@ -67,18 +74,27 @@ end role
 % PKr: La clé publique du radar
 
 role radar (
-    R, S: agent,            
+    R: agent,            
     PKr, PKs: public_key,      
-    SND, RCV: channel(dy)
-    )
+    Snd, Rcv: channel(dy))
 played_by R def=
 
-  local %% TODO
+  local State: nat,
+	G: agent,
+	PKg: public_key,
+	Ng, Nr: text
 
   init State:=0
 
-  transition  
-        %% TODO
+  transition
+        1. State=0 /\ Rcv({Ng'.G'}_PKr)
+		=|> State':=1 /\ Snd(R.G')
+	2. State=1 /\ Rcv({G.PKg'}_inv(PKs))
+		=|> State':=2 /\ Nr':=new() 
+		/\ secret(Nr', snr, {G.R}) 
+		/\ Snd({Ng.Nr'.R}_PKg')
+	3. State=2 /\ Rcv({Nr}_PKr)
+		=|> State':=3 
    
 end role
 
@@ -94,30 +110,28 @@ end role
 role server (S: agent,
 	PKs: public_key,
 	KeyMap: (agent.public_key) set,
-	SND, RCV: channel(dy)
-	)
+	Snd, Rcv: channel(dy))
 played_by S def=
 
-  local State: nat,
-        Kgr: symmetric_key
-
-  init State := 0
+  local G, R: agent,
+	PKr: public_key
 
   transition  
-      requete. State=0 /\ Rcv({G.R}_PKs)
-              =|> Kgr':=new()
+      requete. Rcv(G'.R') /\ in(R'.PKr', KeyMap)
+              =|> Snd({R'.PKr'}_inv(PKs))
 
 end role
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% définition du rôle caractérisant une session
-role session() def= %% TODO
-
-  local %% TODO
+role session(G, R: agent,
+	PKg, PKr, PKs: public_key,
+	Snd, Rcv: channel(dy))
+def=
 
   composition 
-
-	%% TODO
+	gestionnaire(G, R, PKg, PKs, Snd, Rcv)
+	/\ radar(R, PKr, PKs, Snd, Rcv)
 
 end role
 
@@ -125,14 +139,20 @@ end role
 %% définition du rôle caractérisant le scenario à exécuter
 role environment() def=
 
-    const %% TODO
+	local KeyMapS: (agent.public_key) set,
+		Snd, Rcv: channel(dy)
+	
+    	const g, r, s, i: agent,
+		pkg, pkr, pks, pki: public_key,
+		sng, snr, gestionnaire_radar_ng, radar_gestionnaire_nr: protocol_id
 
-    intruder_knowledge = {%% TODO}
+	init KeyMapS:= {g.pkg, r.pkr}
 
-    composition
+	intruder_knowledge = {g, r, s, pkg, pkr, pks, pki, inv(pki)}
 
-	session(%% TODO)
-
+    	composition
+		server(s, pks, KeyMapS, Snd, Rcv)
+		/\ session(g, r, pkg, pkr, pks, Snd, Rcv)
 end role
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -140,7 +160,9 @@ end role
 
 goal
 
-    %% TODO
+	secrecy_of sng, snr
+	authentication_on gestionnaire_radar_ng
+	authentication_on radar_gestionnaire_nr
 
 end goal
 
