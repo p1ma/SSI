@@ -4,32 +4,6 @@
 %% Sujet: Gestion à distance d'un radar automatique de route
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Description du protocole d'échange
-%
-% G: gestionnaire (KG)
-% R: radar (KR)
-% S: serveur (KS)
-% PKg, PKr, PKs: public key
-%
-%
-% Description du protocole:
-% 1. Le gestionnaire (G) indique son intention de discuter avec le radar (R) au serveur (S)
-% 1. G -> S: {G, R}_PKs 
-%
-% 2. Le serveur (S) répond au gestionnaire (G), en fournissant une clé symetrique Kgr
-% 2. S - > G: {R, PKr, Na, {Kgr, G, Na}_PKr}_PKg
-%
-% 3. Maintenant, le gestionnaire (G) envoie son intention de discuter directement avec le radar (R)
-% 3. G -> R: {Kgr, G, Na}_PKr
-%
-% 4. Le radar (R) échange un nonce avec le gestionnaire (G)
-% 4. R -> G: {Nb}_Kgr
-%
-% 5. Le gestionnaire (G) confirme qu'il a bien recu le bon nonce et envoie sa commande au radar (R)
-% 5. G -> R: {Nb--, commande}_Kgr
-%
-% 6. Le radar (R) répond à la commande
-% 6. R -> G: {Nb--, ok}_Kgr
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% définition du rôle gestionnaire, initiant le protocole
 %
@@ -47,22 +21,19 @@ role gestionnaire (
 played_by G def=
 
   local State: nat,
-	Ng, Nr: text,
+	Ng, Nr, Nc, Res: text,
+	KSession: symmetric_key,
 	PKr: public_key
 
   init State := 0
 
   transition  
         1. State=0 /\ Rcv(start)
-                =|>  State':=1 /\ Snd(G.R)
-	2. State=1 /\ Rcv({R.PKr'}_inv(PKs))
-		=|> State':=2 /\ Ng':= new() 
-		/\ secret(Ng', sng, {G.R}) 
-		/\ Snd({Ng'.G}_PKr)
-	3. State=2 /\ Rcv({Ng.Nr'.R}_PKg)
-		=|> State':=3 /\ Snd({Nr'}_PKr)
-
-   
+	   =|> State':=1 /\ Ng':=new() /\ Snd({G.R.Ng'})
+	2. State=1 /\ Rcv({KSession'.Ng.Nr'}_PKg)
+	   =|> State':=2 /\ Nc':=new() /\ Snd({Nc'.Nr'}_KSession')
+	3. State=2 /\ Rcv({Res'.Nr'}_KSession)
+   	   =|> State':=3
 end role
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -81,32 +52,27 @@ played_by R def=
 
   local State: nat,
 	G: agent,
+	KSession: symmetric_key,
 	PKg: public_key,
-	Ng, Nr: text
+	Ng, Nr, Nc, Res: text
 
   init State:=0
-
+  
   transition
-        1. State=0 /\ Rcv({Ng'.G'}_PKr)
-		=|> State':=1 /\ Snd(R.G')
-	2. State=1 /\ Rcv({G.PKg'}_inv(PKs))
-		=|> State':=2 /\ Nr':=new() 
-		/\ secret(Nr', snr, {G.R}) 
-		/\ Snd({Ng.Nr'.R}_PKg')
-	3. State=2 /\ Rcv({Nr}_PKr)
-		=|> State':=3 
+        1. State=0 /\ Rcv({G'.PKg'.Ng'.{KSession'}_inv(PKs)}_PKr')
+	   =|> State':=1 /\ Nr':=new()
+	       /\ Snd({KSession'.Ng'.Nr'}_PKg')
+	       /\ secret(Nr', snr, {G.R})
+	2. State=1 /\ Rcv({Nc'.Nr}_KSession)
+	   =|> State':=2 /\ Res':=new() /\ Nr':= new()
+	       /\ Snd({Res'.Nr'}_KSession)
+
    
 end role
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% définition du rôle serveur
 %
-% Connaissances initiales du serveur:
-% G: Le gestionnaire
-% R: Le radar
-% PKr: La clé publique du radar
-% PKg: La clé publique du gestionnaire
-
 role server (S: agent,
 	PKs: public_key,
 	KeyMap: (agent.public_key) set,
@@ -114,11 +80,13 @@ role server (S: agent,
 played_by S def=
 
   local G, R: agent,
-	PKr: public_key
+  	Ng, Nr, Ns: text,
+	PKg, PKr: public_key,
+	KSession: symmetric_key
 
-  transition  
-      requete. Rcv(G'.R') /\ in(R'.PKr', KeyMap)
-              =|> Snd({R'.PKr'}_inv(PKs))
+  transition
+	1. Rcv({G'.R'.Ng'}_PKs) /\ in(G'.PKg', KeyMap) /\ in(R'.PKr', KeyMap)
+	   =|> KSession':=new() /\ secret(KSession', cle, {G.R.S}) /\ Snd({G'.PKg'.Ng'.{KSession'}_inv(PKs)}_PKr')
 
 end role
 
@@ -144,7 +112,7 @@ role environment() def=
 	
     	const g, r, s, i: agent,
 		pkg, pkr, pks, pki: public_key,
-		sng, snr, gestionnaire_radar_ng, radar_gestionnaire_nr: protocol_id
+		cle, snr: protocol_id
 
 	init KeyMapS:= {g.pkg, r.pkr}
 
@@ -160,9 +128,7 @@ end role
 
 goal
 
-	secrecy_of sng, snr
-	authentication_on gestionnaire_radar_ng
-	authentication_on radar_gestionnaire_nr
+	secrecy_of cle, snr
 
 end goal
 
