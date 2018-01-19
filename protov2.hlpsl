@@ -34,9 +34,11 @@ played_by G def=
 	2. State=1 /\ Rcv({{KSession'}_inv(PKs).R.PKr'}_PKg)
 	   =|> State':=2 /\ Ng':=new()
 	       /\ secret(Ng', sng, {G.R})
-	       /\ Snd({G.PKg.{KSession'}_inv(PKs).Ng'}_PKr')
+	       /\ Snd({G.{KSession'}_inv(PKs).Ng'}_PKr')
+	       /\ witness(G, R, gestionnaire_radar_ng, Ng')
 	3. State=2 /\ Rcv({Ng.Nr'}_KSession)
 	   =|> State':=3 /\ Ng':=new()
+	   	   /\ request(G, R, radar_gestionnaire_nr, Nr')
 	       /\ secret(Commande, scommande, {G.R})
 	       /\ Snd({Ng'.Commande}_KSession)
 	4. State=3 /\ Rcv({Resultat'.Ng}_KSession)
@@ -71,8 +73,10 @@ played_by R def=
 	   =|> State':=1 /\ Nr' := new()
 	       /\ secret(Nr', snr, {G'.R})
 	       /\ Snd({Ng'.Nr'}_KSession')
-	2. State=2 /\ Rcv({Ng'.Commande'}_KSession)
-	   =|> State':=3 /\ Resultat':=new()
+	       /\ witness(R, G', radar_gestionnaire_nr, Nr')
+	       /\ request(R, G', gestionnaire_radar_ng, Ng')
+	2. State=1 /\ Rcv({Ng'.Commande'}_KSession)
+	   =|> State':=2 /\ Resultat':=new()
 	       /\ secret(Resultat', sresultat, {G.R})
 	       /\ Snd({Resultat'.Ng'}_KSession)
    
@@ -88,7 +92,6 @@ role server (S: agent,
 played_by S def=
 
   local G, R: agent,
-  	Ng, Nr, Ns: text,
 	PKg, PKr: public_key,
 	KSession: symmetric_key
 
@@ -126,7 +129,9 @@ role environment() def=
 	
     	const g, r, s, i: agent,
 	      pkg, pkr, pks, pki: public_key,
-	      ksession, scommande, sresultat, sng, snr: protocol_id
+	      ksession, scommande, sresultat, 
+	      sng, snr, gestionnaire_radar_ng, 
+	      radar_gestionnaire_nr: protocol_id
 
 	init KeyMapS:= {g.pkg, r.pkr} /\ Commande:=0
 
@@ -143,6 +148,8 @@ end role
 
 goal
 	secrecy_of ksession, scommande, sresultat, sng, snr
+	authentication_on gestionnaire_radar_ng
+	authentication_on radar_gestionnaire_nr
 end goal
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
