@@ -1,0 +1,150 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Projet de SSI:
+%% Auteurs: Pierre-Marie JUNGES, Florent NOSARI
+%% Sujet: Gestion à distance d'un radar automatique de route
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Description du protocole d'échange
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle gestionnaire, initiant le protocole
+%
+% Connaissances initiales du gestionnaire:
+% S: Le serveur d'authentification
+% R: Le radar a qui envoyé des ordres
+% PKs: La clé publique du serveur d'authentification
+% PKg: La clé publique du gestionnaire
+% C: La commande a envoyer
+
+role gestionnaire (
+    G, R: agent,
+    Commande: nat,
+    PKg, PKs: public_key,      
+    Snd, Rcv: channel(dy))  
+played_by G def=
+
+  local State: nat,
+	Ng, Nr, Resultat: text,
+	KSession: symmetric_key,
+	PKr: public_key
+
+  init State := 0
+
+  transition
+	1. State=0 /\ Rcv(start)
+	   =|> State':=1 /\ Snd({{R}_inv(PKg).G}_PKs)
+	2. State=1 /\ Rcv({{KSession'}_inv(PKs).R.PKr'}_PKg)
+	   =|> State':=2 /\ Ng':=new()
+	       /\ secret(Ng', sng, {G.R})
+	       /\ Snd({G.PKg.{KSession'}_inv(PKs).Ng'}_PKr')
+	3. State=2 /\ Rcv({Ng.Nr'}_KSession)
+	   =|> State':=3 /\ Ng':=new()
+	       /\ secret(Commande, scommande, {G.R})
+	       /\ Snd({Ng'.Commande}_KSession)
+	4. State=3 /\ Rcv({Resultat'.Ng}_KSession)
+	   =|> State':=4
+	
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle radar
+%
+% Connaissances initiales du radar:
+% S: Le serveur d'authentification
+% PKs: La clé publique du serveur d'authentification
+% PKr: La clé publique du radar
+
+role radar (
+    R: agent,            
+    PKr, PKs: public_key,      
+    Snd, Rcv: channel(dy))
+played_by R def=
+
+  local State: nat,
+	G: agent,
+	KSession: symmetric_key,
+	Commande: nat,
+	Ng, Nr, Resultat: text
+
+  init State:=0
+  
+  transition
+        1. State=0 /\ Rcv({G'.{KSession'}_inv(PKs).Ng'}_PKr)
+	   =|> State':=1 /\ Nr' := new()
+	       /\ secret(Nr', snr, {G'.R})
+	       /\ Snd({Ng'.Nr'}_KSession')
+	2. State=2 /\ Rcv({Ng'.Commande'}_KSession)
+	   =|> State':=3 /\ Resultat':=new()
+	       /\ secret(Resultat', sresultat, {G.R})
+	       /\ Snd({Resultat'.Ng'}_KSession)
+   
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle serveur
+%
+role server (S: agent,
+	PKs: public_key,
+	KeyMap: (agent.public_key) set,
+	Snd, Rcv: channel(dy))
+played_by S def=
+
+  local G, R: agent,
+  	Ng, Nr, Ns: text,
+	PKg, PKr: public_key,
+	KSession: symmetric_key
+
+  transition
+	demandes. Rcv({{R'}_inv(PKg').G'}_PKs)
+		  /\ in(G'.PKg', KeyMap)
+		  /\ in(R'.PKr', KeyMap) 
+	   =|> KSession':=new()
+	       /\ secret(KSession', ksession, {G'.R'.S})
+	       /\ Snd({{KSession'}_inv(PKs).R'.PKr'}_PKg')
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle caractérisant une session
+role session(G, R: agent,
+     Commande: nat,
+     PKg, PKr, PKs: public_key,
+     Snd, Rcv: channel(dy))
+def=
+
+  composition 
+	gestionnaire(G, R, Commande, PKg, PKs, Snd, Rcv)
+	/\ radar(R, PKr, PKs, Snd, Rcv)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% définition du rôle caractérisant le scenario à exécuter
+role environment() def=
+
+	local KeyMapS: (agent.public_key) set,
+	      Commande: nat,
+	      Snd, Rcv: channel(dy)
+	
+    	const g, r, s, i: agent,
+	      pkg, pkr, pks, pki: public_key,
+	      ksession, scommande, sresultat, sng, snr: protocol_id
+
+	init KeyMapS:= {g.pkg, r.pkr} /\ Commande:=0
+
+	intruder_knowledge = {g, r, s, pkg, pkr, pks, pki, inv(pki)}
+
+    	composition
+		server(s, pks, KeyMapS, Snd, Rcv)
+		/\ session(g, r, Commande, pkg, pkr, pks, Snd, Rcv)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% pour l'instant, pas de section goal ici (donc pas de propriété à vérifier)
+
+goal
+	secrecy_of ksession, scommande, sresultat, sng, snr
+end goal
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% lancement du rôle principal
+environment()
