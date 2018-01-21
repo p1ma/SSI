@@ -6,5 +6,9 @@ if [ -z "$1" ]
     exit 1
 fi
 ./hlpsl2if ${1}
-./cl-atse --if --of if -f $(echo "${1%.*}").if ${2}
-rm $(echo "${1%.*}").if
+
+FILE=$(echo "${1%.*}").if   
+if [ -f $FILE ]; then
+   ./cl-atse --if --of if -f $(echo "${1%.*}").if ${2}
+    rm $(echo "${1%.*}").if
+fi
