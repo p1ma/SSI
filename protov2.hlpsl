@@ -32,17 +32,16 @@ played_by G def=
 	1. State=0 /\ Rcv(start)
 	   =|> State':=1 /\ Snd({{R}_inv(PKg).G}_PKs)
 	2. State=1 /\ Rcv({{KSession'}_inv(PKs).R.PKr'}_PKg)
-	   =|> State':=2 /\ Ng':=new()
-	       /\ secret(Ng', sng, {G.R})
-	       /\ Snd({G.{KSession'}_inv(PKs).Ng'}_PKr')
-	       /\ witness(G, R, gestionnaire_radar_ng, Ng')
-	3. State=2 /\ Rcv({Ng.Nr'}_KSession)
-	   =|> State':=3 /\ Ng':=new()
-	   	   /\ request(G, R, radar_gestionnaire_nr, Nr')
-	       /\ secret(Commande, scommande, {G.R})
-	       /\ Snd({Ng'.Commande}_KSession)
-	4. State=3 /\ Rcv({Resultat'.Ng}_KSession)
-	   =|> State':=4
+	   =|> State':=2 
+	        /\ Snd({G.{KSession'}_inv(PKs)}_PKr')
+	3. State=2 /\ Rcv({G.Nr'}_KSession)
+	   =|> State':=3
+	   	/\ request(G, R, radar_gestionnaire_nr, Nr')
+	       	/\ secret(Commande, scommande, {G.R})
+		/\ witness(G,R,gestionnaire_radar_commande, Commande)
+	       	/\ Snd({Nr'.Commande}_KSession)
+	4. State=3 /\ Rcv({Resultat'}_KSession)
+	   =|> State':=4 /\ request(G, R, radar_gestionnaire_resultat, Resultat')
 	
 end role
 
@@ -69,16 +68,17 @@ played_by R def=
   init State:=0
   
   transition
-        1. State=0 /\ Rcv({G'.{KSession'}_inv(PKs).Ng'}_PKr)
+        1. State=0 /\ Rcv({G'.{KSession'}_inv(PKs)}_PKr)
 	   =|> State':=1 /\ Nr' := new()
 	       /\ secret(Nr', snr, {G'.R})
-	       /\ Snd({Ng'.Nr'}_KSession')
+	       /\ Snd({G'.Nr'}_KSession')
 	       /\ witness(R, G', radar_gestionnaire_nr, Nr')
-	       /\ request(R, G', gestionnaire_radar_ng, Ng')
-	2. State=1 /\ Rcv({Ng'.Commande'}_KSession)
+	2. State=1 /\ Rcv({Nr.Commande'}_KSession)
 	   =|> State':=2 /\ Resultat':=new()
+	       /\ request(R, G, gestionnaire_radar_commande, Commande')
 	       /\ secret(Resultat', sresultat, {G.R})
-	       /\ Snd({Resultat'.Ng'}_KSession)
+	       /\ witness(R, G, radar_gestionnaire_resultat, Resultat')
+	       /\ Snd({Resultat'}_KSession)
    
 end role
 
@@ -130,7 +130,9 @@ role environment() def=
     	const g, r, s, i: agent,
 	      pkg, pkr, pks, pki: public_key,
 	      ksession, scommande, sresultat, 
-	      sng, snr, gestionnaire_radar_ng, 
+	      snr, gestionnaire_radar_ng, 
+	      gestionnaire_radar_commande,
+	      radar_gestionnaire_resultat,
 	      radar_gestionnaire_nr: protocol_id
 
 	init KeyMapS:= {g.pkg, r.pkr} /\ Commande:=0
@@ -140,6 +142,8 @@ role environment() def=
     	composition
 		server(s, pks, KeyMapS, Snd, Rcv)
 		/\ session(g, r, Commande, pkg, pkr, pks, Snd, Rcv)
+		/\ session(g, i, Commande, pkg, pki, pks, Snd, Rcv)
+		/\ session(i, r, Commande, pki, pkr, pks, Snd, Rcv)
 
 end role
 
@@ -147,9 +151,10 @@ end role
 %% pour l'instant, pas de section goal ici (donc pas de propriété à vérifier)
 
 goal
-	secrecy_of ksession, scommande, sresultat, sng, snr
-	authentication_on gestionnaire_radar_ng
+	secrecy_of ksession, scommande, sresultat, snr
 	authentication_on radar_gestionnaire_nr
+	authentication_on gestionnaire_radar_commande
+	authentication_on radar_gestionnaire_resultat
 end goal
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
