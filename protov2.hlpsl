@@ -1,18 +1,26 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Projet de SSI:
-%% Auteurs: Pierre-Marie JUNGES, Florent NOSARI
-%% Sujet: Gestion à distance d'un radar automatique de route
+%% Projet de SSI:													  %%
+%% Auteurs: Pierre-Marie JUNGES, Florent NOSARI						  %%
+%% Sujet: Gestion à distance d'un radar automatique de route		  %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Description du protocole d'échange
+%% Description du protocole d'échange:
+%%
+%% 1. Gestionnaire --- {{R}_inv(PKg).G}_PKs ------------> Serveur
+%% 2. Gestionnaire <-- {{KSession}_inv(PKs).R.PKr}_PKg -- Serveur
+%% 3. Gestionnaire ------------ {G.{KSession}_inv(PKs)}_PKr ------------> Radar
+%% 4. Gestionnaire <----------- {G.Nr}_KSession ------------------------- Radar
+%% 5. Gestionnaire ------------ {Nr.Commande}_KSession -----------------> Radar
+%% 6. Gestionnaire <----------- {Resultat}_KSession --------------------- Radar
+%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% définition du rôle gestionnaire, initiant le protocole
 %
 % Connaissances initiales du gestionnaire:
-% S: Le serveur d'authentification
-% R: Le radar a qui envoyé des ordres
+% G: Lui même
+% R: Le radar à qui envoyer des ordres
 % PKs: La clé publique du serveur d'authentification
 % PKg: La clé publique du gestionnaire
-% C: La commande a envoyer
+% Commande: La commande à envoyer
 
 role gestionnaire (
     G, R: agent,
@@ -49,7 +57,7 @@ end role
 %% définition du rôle radar
 %
 % Connaissances initiales du radar:
-% S: Le serveur d'authentification
+% R: Lui même
 % PKs: La clé publique du serveur d'authentification
 % PKr: La clé publique du radar
 
@@ -85,6 +93,12 @@ end role
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% définition du rôle serveur
 %
+% Connaissances initiales du serveur d'authentification:
+% S: Lui même
+% PKs: La clé publique du serveur d'authentification
+% KeyMap: Un set de agent.public_key, contenant les agents authorisés 
+%         à discuter
+
 role server (S: agent,
 	PKs: public_key,
 	KeyMap: (agent.public_key) set,
@@ -148,7 +162,6 @@ role environment() def=
 end role
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% pour l'instant, pas de section goal ici (donc pas de propriété à vérifier)
 
 goal
 	secrecy_of ksession, scommande, sresultat, snr
