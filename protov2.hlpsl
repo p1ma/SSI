@@ -10,7 +10,7 @@
 %% 3. Gestionnaire ------------ {G.{KSession}_inv(PKs)}_PKr ------------> Radar
 %% 4. Gestionnaire <----------- {G.Nr}_KSession ------------------------- Radar
 %% 5. Gestionnaire ------------ {Nr.Commande}_KSession -----------------> Radar
-%% 6. Gestionnaire <----------- {Resultat}_KSession --------------------- Radar
+%% 6. Gestionnaire <----------- {Commande.Resultat}_KSession --------------------- Radar
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% définition du rôle gestionnaire, initiant le protocole
@@ -44,11 +44,11 @@ played_by G def=
 	        /\ Snd({G.{KSession'}_inv(PKs)}_PKr')
 	3. State=2 /\ Rcv({G.Nr'}_KSession)
 	   =|> State':=3
-	   	/\ request(G, R, radar_gestionnaire_nr, Nr')
+	   		/\ request(G, R, radar_gestionnaire_nr, Nr')
 	       	/\ secret(Commande, scommande, {G.R})
-		/\ witness(G,R,gestionnaire_radar_commande, Commande)
+			/\ witness(G,R,gestionnaire_radar_commande, Commande)
 	       	/\ Snd({Nr'.Commande}_KSession)
-	4. State=3 /\ Rcv({Resultat'}_KSession)
+	4. State=3 /\ Rcv({Commande.Resultat'}_KSession)
 	   =|> State':=4 /\ request(G, R, radar_gestionnaire_resultat, Resultat')
 	
 end role
@@ -86,7 +86,7 @@ played_by R def=
 	       /\ request(R, G, gestionnaire_radar_commande, Commande')
 	       /\ secret(Resultat', sresultat, {G.R})
 	       /\ witness(R, G, radar_gestionnaire_resultat, Resultat')
-	       /\ Snd({Resultat'}_KSession)
+	       /\ Snd({Commande'.Resultat'}_KSession)
    
 end role
 
