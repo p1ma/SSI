@@ -17,7 +17,6 @@
 \begin{messcall}{#1}{#2}{#3}\end{messcall}
 }
 
-%opening
 \title{Protocole de sécurisation de gestion à distance d'un radar automatique de route}
 \author{Pierre-Marie JUNGES, Florent NOSARI}
 
@@ -33,7 +32,7 @@
 
 \subsection{But}
 
-Le but de ce protocole est de permettre la gestion à distance d'un radar automatique de route pas les autorité compétentes en ayant la certitude que les informations soient authentiques (i.e. qu'elles proviennent bien des relevés fait par le radar), que seul le gestionnaire puisse accéder au données du radar, que seul le gestionnaire puisque contrôler le radar et que toutes les informations qui transitent entre les deux soient confidentielles (i.e. qu'une tierce personne ne puisse pas y avoir accès).
+Le but de ce protocole est de permettre la gestion à distance d'un radar automatique de route par les autorités compétentes en ayant la certitude que les informations soient authentiques (i.e. qu'elles proviennent bien des relevés fait par le radar/gestionnaire ), que seul le gestionnaire puisse accéder au données du radar, que seul le gestionnaire puisque contrôler le radar et que toutes les informations qui transitent entre les deux soient confidentielles (i.e. qu'une tierce personne ne puisse pas y avoir accès).
 \\
 \\
 En résumé :
@@ -43,9 +42,18 @@ En résumé :
 	\item Seul le gestionnaire peut contrôler le radar et accéder au données du radar
 \end{itemize}
 
+\subsection{Contraintes}
+
+Voici le contraintes que nous avons décidé de prendre en compte pour rendre le protocole plus proche des conditions réelles.
+\begin{itemize}
+	\item Les acteurs ne partagent pas de clé secrète avant l'initiation du protocole.
+	\item Le gestionnaire ne connait pas nécessairement la clé publique du radar.
+\end{itemize}
+
+
 \subsection{Déroulement}
 
-Le protocole est initié par le gestionnaire du radar, celui-ci utilise de la cryptographie asymétrique dans un premier temps dans le but d'échanger un clé secrète commune et continuer en cryptographie symétrique. L'authentification se fait à l'aide d'un serveur d'authentification.
+Le protocole est initié par le gestionnaire qui demande à un serveur d'authentification le droit de d'accéder au radar. Les échanges se font à l'aide de cryptographie à clé publique jusqu'à obtenir une clé secrète commune entre le gestionnaire et le radar. 
 \\
 \\
 L'algorithme d'échange est décrit ci-dessous : 
@@ -58,78 +66,78 @@ $R$ le radar avec $PKr$ sa clé publique et  $SKr$ sa clé privé
 \\
 $S$ le serveur avec $PKs$ sa clé publique et  $SKs$ sa clé privé
 \\
-$K$ la clé secrète partagé lors d'une session
+$K_{Session}$ la clé secrète partagé lors d'une session
 \\
-$N_{1}$ et $N_{2}$ des nonces
+$N_{g}$, $N_{r}$ et $N_{c}$ des nonces
 \\
-$M$ un message quelconque
+$C$ une commande quelconque
+\\
+$R$ une réponse quelconque
 \\
 \\
 Les connaissances initiales sont les suivantes :
 \\
 \\
-$G : \{G, R, S, SKg, PKg, PKs\}$
+$G : \{G, R, S, PKg, PKs, C\}$
 \\
-$R : \{R, S, SKr, PKr, PKs\}$
+$R : \{R, S, PKr, PKs\}$
 \\
-$S : \{S, R, SKs, PKs, PKr\}$
-\\
-\\
-Le gestionnaire initie le protocole en envoyant une nonce $N_{1}$, l'identité du radar $R$ et sont mot de passe $PSWD$ le tout chiffré par $PKs$.
-\\
-$G \rightarrow \{N_{1}.R.PSWD\}\_PKs \longrightarrow S$
+$S : \{S, R, PKs, PKr\}$
 \\
 \\
-Si l'identité du gestionnaire est vérifiée alors le serveur envoie au radar une demande de connexion à $G$ accompagné d'une clé secrète $K$, le tout chiffré par $PKr$ et envoie $K$ à $G$.
+Le gestionnaire initie le protocole en envoyant une demande de connexion au serveur avec l'objet de la demande signé.
 \\
-$S \rightarrow \{N_{1}.K\}\_PKg \longrightarrow G$
-\\
-$S \rightarrow \{G.K\}\_PKr \longrightarrow R$
+$G \rightarrow \{{R}_{inv(PKg)}.G\}_{PK_{s}} \longrightarrow S$
 \\
 \\
-Le radar répond au serveur par un nonce $N$ chiffré par $PKs$ pour confirmé l'identité du serveur.
+Si l'identité du gestionnaire et du radar sont vérifiée alors le serveur envoie les informations de connexion ($KSession$ étant générée à ce moment là et signé par le serveur) au gestionnaire.
 \\
-$S \longleftarrow \{N\}\_PKs \leftarrow R$
-\\
-\\
-Le serveur confirme son identité au radar en renvoyant le nonce $N$ chiffré par $PKr$.
-\\
-$S \rightarrow \{N\}\_PKg \longrightarrow R$
+$G \longleftarrow \{\{K_{Session}\}_{inv(PKs)}.R.PK_{r}\}_{PK_{g}} \leftarrow S$
 \\
 \\
-Une fois l'identité du serveur vérifié, le radar indique à $G$ que tout est ok pour communiquer.
+Une fois que le gestionnaire a reçu les informations de connexions, il envoie au radar la clé secrète $KSession$ signé par le serveur.
 \\
-$G \longleftarrow \{ok\}\_PKg \leftarrow R$
+$G \rightarrow \{G.\{KSession`\}_{inv(PKs)}\}_{PK_{r}} \longrightarrow R$
 \\
 \\
-Une fois la clé secrète partagé, $G$ et $R$ l'utilise pour s'envoyer des messages $M$.
+Le radar confirme la réception de la clé en envoyant $N_{g}$ au gestionnaire suivit $N_{r}$ pour vérifier l'authenticité de la commande qui va suivre.
 \\
-
-$G \leftrightarrow \{M\}\_K \leftrightarrow R$
+$G \longleftarrow \{G.N_{r}\}_{K_{Session}} \leftarrow R$
+\\
+\\
+Le gestionnaire peut ainsi envoyer la commande et l'authentifier avec le nonce. 
+\\
+$G \rightarrow \{N_{r}.Commande\}_{K_{Session}} \longrightarrow R$
+\\
+\\
+Le radar envoie par la suite la commande suivit du résultat de la commande.
+\\
+$G \longleftarrow \{Commande.Resultat\}_{K_{Session}} \leftarrow R$
 \\
 \\
 \begin{figure}[h]
+	\caption{Échanges effectués lors du déroulement du protocole}
 	\centering
 	\begin{sequencediagram}
 		\newthread{G}{Gestionnaire}{}
-		\newthread[2]{S}{Serveur d'Auth.}{}
-		\newthread[2]{R}{Radar}{}
+		\newthread[4]{S}{Serveur}{}
+		\newthread[4]{R}{Radar}{}
 		
 	
-		\mess{G}{ $\{N_{1}.R.PSWD\}\_PKs$ }{S}
+		\mess{G}{ $\{{R}_{inv(PKg)}.G\}_{PK_{s}}$ }{S}
 					
-		\mess{S}{ $\{N_{1}.K\}\_PKg$ }{G}
-		\mess{S}{ $\{G.K\}\_PKr$ }{R}
+		\mess{S}{ $\{\{K_{Session}\}_{inv(PKs)}.R.PK_{r}\}_{PK_{g}}$}{G}
 		
-		\mess{R}{ $\{N_{2}\}\_PKs$ }{S}
+		\mess{G}{ $\{G.\{KSession\}_{inv(PKs)}\}_{PK_{r}}$ }{R}
 		
-		\mess{S}{ $\{N_{2}\}\_PKr$ }{R}
+		\mess{R}{ $\{G.N_{r}\}_{K_{Session}}$ }{G}
 		
-		\mess{R}{ $\{ok\}\_PKg$ }{G}
+		
 		
 		\begin{sdblock}{ Loop }{}
-			\mess{G}{ $\{M_{i}\}\_K$ }{R}
-			\mess{R}{ $\{M_{i+1}\}\_K$ }{G}			
+			\mess{G}{ $\{N_{r}.Commande\}_{K_{Session}}$ }{R}
+			
+			\mess{R}{ $\{Commande.Resultat\}_{K_{Session}}$ }{G}	
 		\end{sdblock}
 				
 	\end{sequencediagram}
