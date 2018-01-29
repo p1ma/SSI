@@ -44,11 +44,13 @@ played_by G def=
 	        /\ Snd({G.{KSession'}_inv(PKs)}_PKr')
 	3. State=2 /\ Rcv({G.Nr'}_KSession)
 	   =|> State':=3
-	   		/\ request(G, R, radar_gestionnaire_nr, Nr')
+	   		/\ wrequest(G, R, radar_gestionnaire_nr, Nr')
 	       	/\ secret(Commande, scommande, {G.R})
-			/\ witness(G,R,gestionnaire_radar_commande, Commande)
-	       	/\ Snd({Nr'.Commande}_KSession)
-	4. State=3 /\ Rcv({Commande.Resultat'}_KSession)
+			/\ Ng':=new()
+			/\ secret(Ng', sng, {G.R})
+			/\ witness(G, R,gestionnaire_radar_ng, Ng')
+	       	/\ Snd({Ng'.Nr'.Commande}_KSession)
+	4. State=3 /\ Rcv({Ng.Resultat'}_KSession)
 	   =|> State':=4 /\ request(G, R, radar_gestionnaire_resultat, Resultat')
 	
 end role
@@ -81,12 +83,12 @@ played_by R def=
 	       /\ secret(Nr', snr, {G'.R})
 	       /\ Snd({G'.Nr'}_KSession')
 	       /\ witness(R, G', radar_gestionnaire_nr, Nr')
-	2. State=1 /\ Rcv({Nr.Commande'}_KSession)
+	2. State=1 /\ Rcv({Ng'.Nr.Commande'}_KSession)
 	   =|> State':=2 /\ Resultat':=new()
-	       /\ request(R, G, gestionnaire_radar_commande, Commande')
+	       /\ request(R, G, gestionnaire_radar_ng, Ng')
 	       /\ secret(Resultat', sresultat, {G.R})
 	       /\ witness(R, G, radar_gestionnaire_resultat, Resultat')
-	       /\ Snd({Commande'.Resultat'}_KSession)
+	       /\ Snd({Ng'.Resultat'}_KSession)
    
 end role
 
@@ -144,7 +146,7 @@ role environment() def=
     	const g, r, s, i: agent,
 	      pkg, pkr, pks, pki: public_key,
 	      ksession, scommande, sresultat, 
-	      snr, gestionnaire_radar_ng, 
+	      snr, sng, gestionnaire_radar_ng, 
 	      gestionnaire_radar_commande,
 	      radar_gestionnaire_resultat,
 	      radar_gestionnaire_nr: protocol_id
@@ -156,17 +158,16 @@ role environment() def=
     	composition
 		server(s, pks, KeyMapS, Snd, Rcv)
 		/\ session(g, r, Commande, pkg, pkr, pks, Snd, Rcv)
-		/\ session(g, i, Commande, pkg, pki, pks, Snd, Rcv)
-		/\ session(i, r, Commande, pki, pkr, pks, Snd, Rcv)
+		/\ session(g, r, Commande, pkg, pkr, pks, Snd, Rcv)
 
 end role
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 goal
-	secrecy_of ksession, scommande, sresultat, snr
-	authentication_on radar_gestionnaire_nr
-	authentication_on gestionnaire_radar_commande
+	secrecy_of ksession, scommande, sresultat, snr, sng
+	weak_authentication_on radar_gestionnaire_nr
+	authentication_on gestionnaire_radar_ng
 	authentication_on radar_gestionnaire_resultat
 end goal
 
