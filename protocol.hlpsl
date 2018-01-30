@@ -1,16 +1,16 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Projet de SSI:													  %%
-%% Auteurs: Pierre-Marie JUNGES, Florent NOSARI						  %%
-%% Sujet: Gestion à distance d'un radar automatique de route		  %%
+%% Projet de SSI:						      %%
+%% Auteurs: Pierre-Marie JUNGES, Florent NOSARI			      %%
+%% Sujet: Gestion à distance d'un radar automatique de route	      %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Description du protocole d'échange:
 %%
 %% 1. Gestionnaire --- {{R}_inv(PKg).G}_PKs ------------> Serveur
 %% 2. Gestionnaire <-- {{KSession}_inv(PKs).R.PKr}_PKg -- Serveur
-%% 3. Gestionnaire ------------ {G.{KSession}_inv(PKs)}_PKr ------------> Radar
-%% 4. Gestionnaire <----------- {G.Nr}_KSession ------------------------- Radar
-%% 5. Gestionnaire ------------ {Nr.Commande}_KSession -----------------> Radar
-%% 6. Gestionnaire <----------- {Commande.Resultat}_KSession --------------------- Radar
+%% 3. Gestionnaire ------------ {G.{KSession}_inv(PKs)}_PKr ---------------> Radar
+%% 4. Gestionnaire <----------- {G.Nr}_KSession ---------------------------- Radar
+%% 5. Gestionnaire ------------ {Ng.Nr.Commande}_KSession -----------------> Radar
+%% 6. Gestionnaire <----------- {Ng.Commande.Resultat}_KSession ------------ Radar
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% définition du rôle gestionnaire, initiant le protocole
@@ -38,20 +38,25 @@ played_by G def=
 
   transition
 	1. State=0 /\ Rcv(start)
-	   =|> State':=1 /\ Snd({{R}_inv(PKg).G}_PKs)
-	2. State=1 /\ Rcv({{KSession'}_inv(PKs).R.PKr'}_PKg)
+	   =|> State':=1 
+		/\ Snd({{R}_inv(PKg).G}_PKs)
+	2. State=1 
+		/\ Rcv({{KSession'}_inv(PKs).R.PKr'}_PKg)
 	   =|> State':=2 
 	        /\ Snd({G.{KSession'}_inv(PKs)}_PKr')
-	3. State=2 /\ Rcv({G.Nr'}_KSession)
+	3. State=2 
+		/\ Rcv({G.Nr'}_KSession)
 	   =|> State':=3
-	   		/\ wrequest(G, R, radar_gestionnaire_nr, Nr')
+		/\ wrequest(G, R, radar_gestionnaire_nr, Nr')
 	       	/\ secret(Commande, scommande, {G.R})
-			/\ Ng':=new()
-			/\ secret(Ng', sng, {G.R})
-			/\ witness(G, R,gestionnaire_radar_ng, Ng')
+		/\ Ng':=new()
+		/\ secret(Ng', sng, {G.R})
+		/\ witness(G, R,gestionnaire_radar_ng, Ng')
 	       	/\ Snd({Ng'.Nr'.Commande}_KSession)
-	4. State=3 /\ Rcv({Ng.Resultat'}_KSession)
-	   =|> State':=4 /\ request(G, R, radar_gestionnaire_resultat, Resultat')
+	4. State=3 
+		/\ Rcv({Ng.Resultat'}_KSession)
+	   =|> State':=4 
+		/\ request(G, R, radar_gestionnaire_resultat, Resultat')
 	
 end role
 
@@ -78,17 +83,21 @@ played_by R def=
   init State:=0
   
   transition
-        1. State=0 /\ Rcv({G'.{KSession'}_inv(PKs)}_PKr)
-	   =|> State':=1 /\ Nr' := new()
-	       /\ secret(Nr', snr, {G'.R})
-	       /\ Snd({G'.Nr'}_KSession')
-	       /\ witness(R, G', radar_gestionnaire_nr, Nr')
-	2. State=1 /\ Rcv({Ng'.Nr.Commande'}_KSession)
-	   =|> State':=2 /\ Resultat':=new()
-	       /\ request(R, G, gestionnaire_radar_ng, Ng')
-	       /\ secret(Resultat', sresultat, {G.R})
-	       /\ witness(R, G, radar_gestionnaire_resultat, Resultat')
-	       /\ Snd({Ng'.Resultat'}_KSession)
+        1. State=0 
+		/\ Rcv({G'.{KSession'}_inv(PKs)}_PKr)
+	   =|> State':=1 
+		/\ Nr' := new()
+		/\ secret(Nr', snr, {G'.R})
+		/\ Snd({G'.Nr'}_KSession')
+		/\ witness(R, G', radar_gestionnaire_nr, Nr')
+	2. State=1 
+		/\ Rcv({Ng'.Nr.Commande'}_KSession)
+	   =|> State':=2 
+		/\ Resultat':=new()
+		/\ request(R, G, gestionnaire_radar_ng, Ng')
+		/\ secret(Resultat', sresultat, {G.R})
+		/\ witness(R, G, radar_gestionnaire_resultat, Resultat')
+		/\ Snd({Ng'.Resultat'}_KSession)
    
 end role
 
@@ -113,11 +122,11 @@ played_by S def=
 
   transition
 	demandes. Rcv({{R'}_inv(PKg').G'}_PKs)
-		  /\ in(G'.PKg', KeyMap)
-		  /\ in(R'.PKr', KeyMap) 
+		/\ in(G'.PKg', KeyMap)
+		/\ in(R'.PKr', KeyMap) 
 	   =|> KSession':=new()
-	       /\ secret(KSession', ksession, {G'.R'.S})
-	       /\ Snd({{KSession'}_inv(PKs).R'.PKr'}_PKg')
+		/\ secret(KSession', ksession, {G'.R'.S})
+		/\ Snd({{KSession'}_inv(PKs).R'.PKr'}_PKg')
 
 end role
 
@@ -157,7 +166,6 @@ role environment() def=
 
     	composition
 		server(s, pks, KeyMapS, Snd, Rcv)
-		/\ session(g, r, Commande, pkg, pkr, pks, Snd, Rcv)
 		/\ session(g, r, Commande, pkg, pkr, pks, Snd, Rcv)
 
 end role
