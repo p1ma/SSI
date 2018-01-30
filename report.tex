@@ -43,7 +43,7 @@
 }
 
 \title{Protocole de sécurisation de gestion à distance d'un radar automatique de route}
-\author{Pierre-Marie JUNGES, Florent NOSARI}
+\author{Pierre-Marie JUNGES, Florent NOSARI \\ \url{https://github.com/p1ma/SSI}}
 
 \begin{document}
 
@@ -125,7 +125,7 @@ Une fois que le gestionnaire a reçu les informations de connexions, il envoie a
 $G \rightarrow \{G.\{KSession`\}_{inv(PKs)}\}_{PK_{r}} \longrightarrow R$
 \\
 \\
-Le radar confirme la réception de la clé en envoyant $N_{g}$ au gestionnaire suivit $N_{r}$ pour vérifier l'authenticité de la commande qui va suivre.
+Le radar confirme la réception de la clé en envoyant $G$ au gestionnaire suivit $N_{r}$ pour vérifier l'authenticité de la commande qui va suivre le tout chiffré avec $K_{Session}$.
 \\
 $G \longleftarrow \{G.N_{r}\}_{K_{Session}} \leftarrow R$
 \\
@@ -189,7 +189,7 @@ Les propriétés que nous avons tester avec AVISPA sont les suivante :
 
 \subsubsection{Conditions normales}
 
-En conditions normales, c'est à dire de $G$ à $R$ uniquement, le protocole est sécurisé. Dans le fichier HTPSL on créer les session de la façon suivante :
+En conditions normales, c'est à dire de $G$ à $R$ uniquement, le protocole est sécurisé. Dans le fichier HTPSL on créer les sessions de la façon suivante :
 \begin{itemize}
 	\item $A$ communique avec $B$
 \end{itemize}
@@ -221,7 +221,7 @@ Computation: 0.02 seconds
 
 \subsubsection{Ajout d'un intrus au milieu}
 
-Ici on teste dans les conditions où un intrus $I$ tenterait une attaque type \textit{man-in-the-middle}. Dans le fichier HTPSL on créer les session de la façon suivante :
+Ici on teste dans les conditions où un intrus $I$ tenterait une attaque type \textit{man-in-the-middle}. Dans le fichier HTPSL on créer les sessions de la façon suivante :
 \begin{itemize}
 	\item $A$ communique avec $I$
 	\item $I$ communique avec $B$
@@ -257,7 +257,7 @@ Computation: 0.14 seconds
 
 \subsubsection{Rejeu}
 
-Ici on teste dans les conditions où l'on fait deux communications équivalent. Dans le fichier HTPSL on créer les session de la façon suivante :
+Ici on teste dans les conditions où l'on fait deux communications équivalent. Dans le fichier HTPSL on créer les sessions de la façon suivante :
 \begin{itemize}
 	\item $A$ communique avec $B$
 	\item $A$ communique avec $B$
@@ -289,4 +289,10 @@ Reachable  : 217455 states
 Translation: 0.05 seconds
 Computation: 36.64 seconds
 \end{lstlisting}
+
+\section{Démarche}
+
+Tout notre démarche est visble sur notre dépôt github  \url{https://github.com/p1ma/SSI} ainsi que le code source.
+
+
 \end{document}
