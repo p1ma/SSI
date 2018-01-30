@@ -3,7 +3,32 @@
 \usepackage[utf8x]{inputenc}
 \usepackage{pgf-umlsd}
 \usepackage{tikz}
+\usepackage{listings}
+\usepackage{color}
 
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.94,0.94,0.94}
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	basicstyle=\ttfamily\footnotesize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	numbers=left,                    
+	numbersep=5pt,                  
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=2
+}
+\lstset{style=mystyle}
 % \newthread[edge distance]{var}{thread name}
 \renewcommand{\newthread}[3][0.2]{
 	\newinst[#1]{#2}{#3}
@@ -68,21 +93,21 @@ $S$ le serveur avec $PKs$ sa clé publique et  $SKs$ sa clé privé
 \\
 $K_{Session}$ la clé secrète partagé lors d'une session
 \\
-$N_{g}$, $N_{r}$ et $N_{c}$ des nonces
+$N_{g}$ et $N_{r}$ des nonces
 \\
-$C$ une commande quelconque
+$Commande$ une commande quelconque
 \\
-$R$ une réponse quelconque
+$Resultat$ une réponse quelconque
 \\
 \\
 Les connaissances initiales sont les suivantes :
 \\
 \\
-$G : \{G, R, S, PKg, PKs, C\}$
+$G : \{G, R, S, PKg, PKs, Commande\}$
 \\
 $R : \{R, S, PKr, PKs\}$
 \\
-$S : \{S, R, PKs, PKr\}$
+$S : \{G, R, S, PKs, PKr\}$
 \\
 \\
 Le gestionnaire initie le protocole en envoyant une demande de connexion au serveur avec l'objet de la demande signé.
@@ -105,14 +130,14 @@ Le radar confirme la réception de la clé en envoyant $N_{g}$ au gestionnaire s
 $G \longleftarrow \{G.N_{r}\}_{K_{Session}} \leftarrow R$
 \\
 \\
-Le gestionnaire peut ainsi envoyer la commande et l'authentifier avec le nonce. 
+Le gestionnaire peut ainsi envoyer la commande et l'authentifier avec le nonce, il envoie aussi un nonce pour authentifier le résultat de la commande. 
 \\
-$G \rightarrow \{N_{r}.Commande\}_{K_{Session}} \longrightarrow R$
+$G \rightarrow \{N_{g}.N_{r}.Commande\}_{K_{Session}} \longrightarrow R$
 \\
 \\
-Le radar envoie par la suite la commande suivit du résultat de la commande.
+Le radar envoie par la suite la commande suivit du résultat de la commande et du nonce qui l'identifie.
 \\
-$G \longleftarrow \{Commande.Resultat\}_{K_{Session}} \leftarrow R$
+$G \longleftarrow \{N_{g}.Commande.Resultat\}_{K_{Session}} \leftarrow R$
 \\
 \\
 \begin{figure}[h]
@@ -135,12 +160,133 @@ $G \longleftarrow \{Commande.Resultat\}_{K_{Session}} \leftarrow R$
 		
 		
 		\begin{sdblock}{ Loop }{}
-			\mess{G}{ $\{N_{r}.Commande\}_{K_{Session}}$ }{R}
+			\mess{G}{ $\{N_{g}.N_{r}.Commande\}_{K_{Session}}$ }{R}
 			
-			\mess{R}{ $\{Commande.Resultat\}_{K_{Session}}$ }{G}	
+			\mess{R}{ $\{N_{g}.Commande.Resultat\}_{K_{Session}}$ }{G}	
 		\end{sdblock}
 				
 	\end{sequencediagram}
 \end{figure}
 
+\section{Analyse à l'aide du logiciel AVISPA}
+
+\subsection{Les \textit{goals}}
+
+Les propriétés que nous avons tester avec AVISPA sont les suivante : 
+\begin{itemize}
+	\item Confidentialité de $K_{Session}$
+	\item Confidentialité de $Commande$
+	\item Confidentialité de $Resultat$
+	\item Confidentialité de $N_{g}$
+	\item Confidentialité de $N_{r}$
+	\item Authentification sur $N_{g}$
+	\item Authentification sur $Resultat$
+	\item Authentification sur $N_{r}$
+	
+\end{itemize}
+
+\subsection{Résultat}
+
+\subsubsection{Conditions normales}
+
+En conditions normales, c'est à dire de $G$ à $R$ uniquement, le protocole est sécurisé. Dans le fichier HTPSL on créer les session de la façon suivante :
+\begin{itemize}
+	\item $A$ communique avec $B$
+\end{itemize}
+Avec $A$ représentant le gestionnaire et $B$ le radar.
+\begin{lstlisting}[caption=Résultat d'éxécution - Conditions normales ]
+SUMMARY
+SAFE
+
+DETAILS
+BOUNDED NUMBER OF SESSIONS
+TYPED MODEL
+BOUNDED SPEC. READING DEPTH
+
+PROTOCOL
+protocol.if
+
+GOAL
+As specified
+
+BACKEND
+CL-AtSe
+
+STATISTICS
+Analysed   : 203 states
+Reachable  : 83 states
+Translation: 0.03 seconds
+Computation: 0.02 seconds
+\end{lstlisting}
+
+\subsubsection{Ajout d'un intrus au milieu}
+
+Ici on teste dans les conditions où un intrus $I$ tenterait une attaque type \textit{man-in-the-middle}. Dans le fichier HTPSL on créer les session de la façon suivante :
+\begin{itemize}
+	\item $A$ communique avec $I$
+	\item $I$ communique avec $B$
+	\item $A$ communique avec $B$
+\end{itemize}
+
+Avec $A$ représentant le gestionnaire et $B$ le radar.
+
+\begin{lstlisting}[caption=Résultat d'éxécution - Man-in-the-middle ]
+SUMMARY
+SAFE
+
+DETAILS
+BOUNDED NUMBER OF SESSIONS
+TYPED MODEL
+BOUNDED SPEC. READING DEPTH
+
+PROTOCOL
+protocol.if
+
+GOAL
+As specified
+
+BACKEND
+CL-AtSe
+
+STATISTICS
+Analysed   : 3206 states
+Reachable  : 855 states
+Translation: 0.05 seconds
+Computation: 0.14 seconds
+\end{lstlisting}
+
+\subsubsection{Rejeu}
+
+Ici on teste dans les conditions où l'on fait deux communications équivalent. Dans le fichier HTPSL on créer les session de la façon suivante :
+\begin{itemize}
+	\item $A$ communique avec $B$
+	\item $A$ communique avec $B$
+\end{itemize}
+
+Avec $A$ représentant le gestionnaire et $B$ le radar.
+
+\begin{lstlisting}[caption=Résultat d'éxécution - Rejeu ]
+SUMMARY
+SAFE
+
+DETAILS
+BOUNDED NUMBER OF SESSIONS
+TYPED MODEL
+BOUNDED SPEC. READING DEPTH
+
+PROTOCOL
+../protocol.if
+
+GOAL
+As specified
+
+BACKEND
+CL-AtSe
+
+STATISTICS
+Analysed   : 419280 states
+Reachable  : 217455 states
+Translation: 0.05 seconds
+Computation: 36.64 seconds
+\end{lstlisting}
 \end{document}
